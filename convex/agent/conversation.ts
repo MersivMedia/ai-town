@@ -17,6 +17,13 @@ export async function startConversationMessage(
   playerId: GameId<'players'>,
   otherPlayerId: GameId<'players'>,
 ): Promise<string> {
+  console.log('Starting conversation message generation...', {
+    worldId,
+    conversationId,
+    playerId,
+    otherPlayerId
+  });
+
   const { player, otherPlayer, agent, otherAgent, lastConversation } = await ctx.runQuery(
     selfInternal.queryPromptData,
     {
@@ -26,6 +33,14 @@ export async function startConversationMessage(
       conversationId,
     },
   );
+
+  console.log('Conversation context:', {
+    player: player.name,
+    otherPlayer: otherPlayer.name,
+    hasAgent: !!agent,
+    hasOtherAgent: !!otherAgent
+  });
+
   const embedding = await embeddingsCache.fetch(
     ctx,
     `${player.name} is talking to ${otherPlayer.name}`,
@@ -65,6 +80,8 @@ export async function startConversationMessage(
     max_tokens: 300,
     stop: stopWords(otherPlayer.name, player.name),
   });
+
+  console.log('Generated message:', content);
   return trimContentPrefx(content, lastPrompt);
 }
 
@@ -186,44 +203,41 @@ function agentPrompts(
   otherPlayer: { name: string },
   agent: { identity: string; plan: string } | null,
   otherAgent: { identity: string; plan: string } | null,
-): string[] {
+) {
   const prompt = [];
   if (agent) {
-    prompt.push(`About you: ${agent.identity}`);
-    prompt.push(`Your goals for the conversation: ${agent.plan}`);
+    prompt.push(
+      `Your identity: ${agent.identity}`,
+      `Your current plan: ${agent.plan}`,
+    );
   }
   if (otherAgent) {
-    prompt.push(`About ${otherPlayer.name}: ${otherAgent.identity}`);
+    prompt.push(
+      `${otherPlayer.name}'s identity: ${otherAgent.identity}`,
+      `${otherPlayer.name}'s current plan: ${otherAgent.plan}`,
+    );
   }
   return prompt;
 }
 
 function previousConversationPrompt(
   otherPlayer: { name: string },
-  conversation: { created: number } | null,
-): string[] {
-  const prompt = [];
-  if (conversation) {
-    const prev = new Date(conversation.created);
-    const now = new Date();
-    prompt.push(
-      `Last time you chatted with ${
-        otherPlayer.name
-      } it was ${prev.toLocaleString()}. It's now ${now.toLocaleString()}.`,
-    );
-  }
-  return prompt;
+  lastConversation: any | null,
+) {
+  if (!lastConversation) return [];
+  return [
+    `You previously had a conversation with ${otherPlayer.name}.`,
+    `Here's what was discussed:`,
+    lastConversation.summary,
+  ];
 }
 
-function relatedMemoriesPrompt(memories: memory.Memory[]): string[] {
-  const prompt = [];
-  if (memories.length > 0) {
-    prompt.push(`Here are some related memories in decreasing relevance order:`);
-    for (const memory of memories) {
-      prompt.push(' - ' + memory.description);
-    }
-  }
-  return prompt;
+function relatedMemoriesPrompt(memories: any[]) {
+  if (memories.length === 0) return [];
+  return [
+    `Here are some relevant memories:`,
+    ...memories.map((m) => m.text),
+  ];
 }
 
 async function previousMessages(

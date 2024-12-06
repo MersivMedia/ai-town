@@ -67,6 +67,11 @@ export class Conversation {
     // of them to "participating" and stop their paths.
     if (member1.status.kind === 'walkingOver' && member2.status.kind === 'walkingOver') {
       if (playerDistance < CONVERSATION_DISTANCE) {
+        console.log('Players close enough, starting conversation:', {
+          player1: player1.id,
+          player2: player2.id,
+          distance: playerDistance
+        });
         console.log(`Starting conversation between ${player1.id} and ${player2.id}`);
 
         // First, stop the two players from moving.
@@ -120,6 +125,11 @@ export class Conversation {
   }
 
   static start(game: Game, now: number, player: Player, invitee: Player) {
+    console.log('Attempting to start conversation between:', {
+      player: player.id,
+      invitee: invitee.id
+    });
+
     if (player.id === invitee.id) {
       throw new Error(`Can't invite yourself to a conversation`);
     }
@@ -310,17 +320,30 @@ export const conversationInputs = {
       timestamp: v.number(),
     },
     handler: (game: Game, now: number, args): null => {
+      console.log('Finishing message:', args);
+      
       const playerId = parseGameId('players', args.playerId);
       const conversationId = parseGameId('conversations', args.conversationId);
       const conversation = game.world.conversations.get(conversationId);
       if (!conversation) {
         throw new Error(`Invalid conversation ID: ${conversationId}`);
       }
+
+      // Clear typing state
       if (conversation.isTyping && conversation.isTyping.playerId === playerId) {
         delete conversation.isTyping;
       }
+
+      // Update conversation state
       conversation.lastMessage = { author: playerId, timestamp: args.timestamp };
       conversation.numMessages++;
+
+      console.log('Updated conversation state:', {
+        conversationId,
+        numMessages: conversation.numMessages,
+        lastMessage: conversation.lastMessage
+      });
+
       return null;
     },
   }),
@@ -334,17 +357,14 @@ export const conversationInputs = {
       conversationId,
     },
     handler: (game: Game, now: number, args): null => {
+      console.log('Accepting conversation invite:', args);
       const playerId = parseGameId('players', args.playerId);
-      const player = game.world.players.get(playerId);
-      if (!player) {
-        throw new Error(`Invalid player ID ${playerId}`);
-      }
       const conversationId = parseGameId('conversations', args.conversationId);
       const conversation = game.world.conversations.get(conversationId);
       if (!conversation) {
         throw new Error(`Invalid conversation ID ${conversationId}`);
       }
-      conversation.acceptInvite(game, player);
+      conversation.acceptInvite(game, game.world.players.get(playerId)!);
       return null;
     },
   }),

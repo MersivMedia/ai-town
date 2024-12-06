@@ -12,11 +12,12 @@ export default defineSchema({
   }),
 
   messages: defineTable({
-    conversationId,
+    worldId: v.id('worlds'),
+    conversationId: v.string(),
+    author: v.string(),
     messageUuid: v.string(),
-    author: playerId,
     text: v.string(),
-    worldId: v.optional(v.id('worlds')),
+    isPrivate: v.optional(v.boolean())
   })
     .index('conversationId', ['worldId', 'conversationId'])
     .index('messageUuid', ['conversationId', 'messageUuid']),

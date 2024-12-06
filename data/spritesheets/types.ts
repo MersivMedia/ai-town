@@ -1,26 +1,26 @@
-export type Frame = {
-  frame: {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+export interface SpritesheetData {
+  frames: {
+    [key: string]: {
+      frame: {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+      };
+      sourceSize: {
+        w: number;
+        h: number;
+      };
+      spriteSourceSize: {
+        x: number;
+        y: number;
+      };
+    };
   };
-  rotated?: boolean;
-  trimmed?: boolean;
-  spriteSourceSize: {
-    x: number;
-    y: number;
+  animations: {
+    [key: string]: string[];
   };
-  sourceSize: {
-    w: number;
-    h: number;
-  };
-};
-
-export type SpritesheetData = {
-  frames: Record<string, Frame>;
-  animations?: Record<string, string[]>;
   meta: {
-    scale: string;
+    scale?: string;
   };
-};
+}
